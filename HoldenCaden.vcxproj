@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{931f3a16-80f3-4d8b-b27d-f3e6af771733}</ProjectGuid>
+    <ProjectGuid>{6AA5DAB0-F31A-4A84-BD1A-1F9E57054706}</ProjectGuid>
     <RootNamespace>ImGuiSimple</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>HoldenCaden</ProjectName>
