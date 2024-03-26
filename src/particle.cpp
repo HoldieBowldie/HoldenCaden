@@ -45,7 +45,7 @@ Particle::Particle(glm::vec3 _pos, GLfloat _m, bool _locked) {
 Particle::~Particle(void) {} // empty for now !!
 
 void Particle::AddConstraint(Particle p) {
-	Constraint C(this, &p);
+	Constraint C(this, &p, 100.0f);
 	cons.push_back(C);
 }
 

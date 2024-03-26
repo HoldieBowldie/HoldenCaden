@@ -18,8 +18,12 @@ namespace spring {
 
 	GLfloat a = 1.0f; // air resistance constant
 
-	// Update a particle's acceleration
-	void updateAcceleration(Particle* p) {
+	// Update a particle's position, velocity, and acceleration.
+	void updateParticle(Particle* p, GLfloat deltaTime) {
+		if (p->locked) {
+			return; // locked particles do not move
+		}
+
 		glm::vec3 F = glm::vec3(0.0f, 0.0f, 0.0f); // force acting upon the particle
 
 		F += (p->m * g);
@@ -31,11 +35,10 @@ namespace spring {
 			F -= c.k * (c.length() - c.restLength);
 		}
 
-		p->a = F / p->m; // acceleration = force / mass
-	}
-
-	// Iterate through all particles to update them
-	void updateParticles(vector<Particle> particles) {
-		// TODO
+		p->pos = p->pos + deltaTime * p->v;
+		p->v = p->v + deltaTime * p->a;
+		p->a = F / p->m;
+		
+		return;
 	}
 }

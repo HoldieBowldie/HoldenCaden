@@ -30,6 +30,9 @@
 #include "constraint.cpp"
 #include "springPhysics.h"
 
+#include <chrono>
+#include <ctime>
+
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
 
@@ -88,13 +91,21 @@ void CreateParticles(vector <Particle>* a, int squares)
 				r,
 				r * z);
 
-			AddParticle(a, Particle(v, false));
+			// lock two of the corners
+			if ((i == 0) && ((j == 0) || (j == (squares - 1)))) {
+				AddParticle(a, Particle(v, true));
+			}
+			else {
+				AddParticle(a, Particle(v, false));
+			}
+			
 			
 		}
 	}
 }
 
 void CreateConstraints(vector <Particle> p) {
+	// TODO rewrite this to not create duplicate constraints
 	for (int i = 0; i < p.size(); i++) 
 	{
 		if ((i % squares) > 0) {
@@ -311,7 +322,7 @@ void BuildScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> particle
 	//Make it valid
 	glEnableVertexAttribArray(0);
 
-	v.clear(); //no need for the data, it is on the GPU now
+	v.clear(); // no need for the data, it is on the GPU now
 
 }
 
@@ -439,6 +450,9 @@ int main()
 	glfwSetCursorPosCallback(window, MouseCallback);
 	glfwSetMouseButtonCallback(window, MouseButtonCallback);;
 
+	// record start time for physics calcs
+	auto startTime = chrono::system_clock::now();
+
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -463,7 +477,11 @@ int main()
 			//ImGui::OpenPopup("Saved");
 		}
 		//color picker
-		if (ImGui::SliderInt("Squares", &squares, 1, 100, "%d", 0)) {
+		if (ImGui::SliderInt("Squares", &squares, 2, 100, "%d", 0)) {
+			particles.clear();
+			CreateParticles(&particles, squares);
+			CreateConstraints(particles);
+
 			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
 		}
 		if (ImGui::SliderInt("point Size", &pointSize, 1, 10, "%d", 0)) {
@@ -478,6 +496,19 @@ int main()
 
 		// Ends the window
 		ImGui::End();
+
+		// Perform a step of physics simulation and rebuild scene
+		auto endTime = chrono::system_clock::now();
+		chrono::duration<GLfloat> elapsedTime = startTime - endTime; // in seconds
+		GLfloat deltaTime = elapsedTime.count();
+		startTime = chrono::system_clock::now();
+
+		for (int i = 0; i < particles.size(); i++) {
+			spring::updateParticle(&particles[i], deltaTime);
+		}
+		
+		BuildScene(VBO, VAO, squares, particles);
+		// Done with physics step
 
 		//set the projection matrix
 		glm::mat4 proj = glm::perspective(65.f, 1.f, 0.01f, 1000.f);
