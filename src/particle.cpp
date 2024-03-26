@@ -29,6 +29,18 @@ Particle::Particle(glm::vec3 _pos, bool _locked) {
 	locked = _locked;
 }
 
+Particle::Particle(glm::vec3 _pos, GLfloat _m) {
+	pos = _pos;
+	m = _m;
+	locked = false;
+}
+
+Particle::Particle(glm::vec3 _pos, GLfloat _m, bool _locked) {
+	pos = _pos;
+	m = _m;
+	locked = _locked;
+}
+
 // destructor
 Particle::~Particle(void) {} // empty for now !!
 

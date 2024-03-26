@@ -26,8 +26,8 @@
 #include "objGen.h" 
 #include "trackball.h"
 
-#include "particle.cpp"
-#include "constraint.cpp"
+#include "particle.h"
+#include "constraint.h"
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
@@ -87,7 +87,7 @@ void CreateParticles(vector <Particle>* a, int squares)
 				r,
 				r * z);
 
-			AddParticle(a, Particle(v, 0));
+			AddParticle(a, Particle(v, false));
 			
 		}
 	}

@@ -28,7 +28,9 @@ public:
 	Particle* a; // first endpoint, pointer to a particle
 	Particle* b; // second endpoint
 	GLfloat k; // elasticity
-	GLfloat length; // default length of the constraint 
+	GLfloat restLength; // resting length of the constraint
+
+	GLfloat length(void);
 
 };
 

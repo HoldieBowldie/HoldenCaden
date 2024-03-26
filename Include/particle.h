@@ -24,7 +24,10 @@ public:
 
 	// variables
 	bool locked; // whether the particle is able to move
-	glm::vec3 pos; // the particle's position
+	glm::vec3 pos; // position
+	glm::vec3 v = glm::vec3(0.f, 0.f, 0.f); // velocity
+	glm::vec3 a = glm::vec3(0.f, 0.f, 0.f); // acceleration
+	GLfloat m = 1.0f; // mass
 	vector <Constraint> cons;
 
 	// constructors
@@ -33,6 +36,10 @@ public:
 	Particle(glm::vec3 _pos);
 
 	Particle(glm::vec3 _pos, bool _locked);
+
+	Particle(glm::vec3 _pos, GLfloat _m);
+
+	Particle(glm::vec3 _pos, GLfloat _m, bool _locked);
 
 	// destructor
 	~Particle(void);
