@@ -26,8 +26,8 @@
 #include "objGen.h" 
 #include "trackball.h"
 
-#include "particle.h"
-#include "constraint.h"
+#include "particle.cpp"
+#include "constraint.cpp"
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
@@ -44,7 +44,7 @@ std::string filename = "geometry.obj";
 GLuint points = 0;
 int pointSize = 5;
 int lineWidth = 1;
-int squares = 50;
+int squares = 10;
 GLdouble mouseX, mouseY;
 
 //Vertex array object and vertex buffer object indices 
