@@ -48,7 +48,7 @@ std::string filename = "geometry.obj";
 GLuint points = 0;
 int pointSize = 5;
 int lineWidth = 1;
-int squares = 10;
+int squares = 3;
 GLdouble mouseX, mouseY;
 
 //Vertex array object and vertex buffer object indices 
@@ -62,8 +62,12 @@ inline void AddVertex(vector <GLfloat>* a, glm::vec3 A)
 
 inline void AddParticle(vector <Particle>* a, Particle P)
 {
-
 	a->push_back(P);
+}
+
+inline void AddConstraint(vector <Constraint>* a, Constraint C)
+{
+	a->push_back(C);
 }
 
 //Set up particles and constraints
@@ -92,7 +96,7 @@ void CreateParticles(vector <Particle>* a, int squares)
 				r * z);
 
 			// lock two of the corners
-			if ((i == 0) && ((j == 0) || (j == (squares - 1)))) {
+			if ((i == 0) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
 			else {
@@ -104,36 +108,73 @@ void CreateParticles(vector <Particle>* a, int squares)
 	}
 }
 
-void CreateConstraints(vector <Particle> p) {
+void CreateConstraints(vector <Particle> *p, vector <Constraint> *c) {
 	// TODO rewrite this to not create duplicate constraints
+	Particle* p1;
+	Particle* p2;
+	Constraint x;
+
+	for (int i = 0; i < p->size(); i++) {
+		// connect top right neighbor
+		if (((i % squares) < (squares - 1)) && ((i / squares) > 0)) {
+			p1 = &p->at(i);
+			p2 = &p->at(i + 1 - squares);
+			x = Constraint(p1, p2);
+			p1->AddConstraint(x); p2->AddConstraint(x); AddConstraint(c, x);
+		}
+		// connect right neighbor
+		if ((i % squares) < (squares - 1)) {
+			p1 = &p->at(i);
+			p2 = &p->at(i + 1);
+			x = Constraint(p1, p2);
+			p1->AddConstraint(x); p2->AddConstraint(x); AddConstraint(c, x);
+		}
+		// connect lower right neighbor
+		if (((i % squares) < (squares - 1)) && ((i / squares) < (squares - 1))) {
+			p1 = &p->at(i);
+			p2 = &p->at(i + 1 + squares);
+			x = Constraint(p1, p2);
+			p1->AddConstraint(x); p2->AddConstraint(x); AddConstraint(c, x);
+		}
+		// connect lower neighbor
+		if ((i / squares) < (squares - 1)) {
+			p1 = &p->at(i);
+			p2 = &p->at(i + squares);
+			x = Constraint(p1, p2);
+			p1->AddConstraint(x); p2->AddConstraint(x); AddConstraint(c, x);
+		}
+	}
+
+	/*
 	for (int i = 0; i < p.size(); i++) 
 	{
 		if ((i % squares) > 0) {
-			p[i].AddConstraint(p[i - 1]);
+			p[i].AddConstraint(p[i - 1], c);
 
 			if ((i / squares) > 0) {
-				p[i].AddConstraint(p[i - squares - 1]);
+				p[i].AddConstraint(p[i - squares - 1], c);
 			}
 			if ((i / squares) < (squares - 1)) {
-				p[i].AddConstraint(p[i + squares - 1]);
+				p[i].AddConstraint(p[i + squares - 1], c);
 			}
 		}
 		if ((i % squares) < (squares - 1)) {
-			p[i].AddConstraint(p[i + 1]);
+			p[i].AddConstraint(p[i + 1], c);
 			if ((i / squares) > 0) {
-				p[i].AddConstraint(p[i - squares + 1]);
+				p[i].AddConstraint(p[i - squares + 1], c);
 			}
 			if ((i / squares) < (squares - 1)) {
-				p[i].AddConstraint(p[i + squares + 1]);
+				p[i].AddConstraint(p[i + squares + 1], c);
 			}
 		}
 		if ((i / squares) > 0) {
-			p[i].AddConstraint(p[i - squares]);
+			p[i].AddConstraint(p[i - squares], c);
 		}
 		if ((i / squares) < (squares - 1)) {
-			p[i].AddConstraint(p[i + squares]);
+			p[i].AddConstraint(p[i + squares], c);
 		}
 	}
+	*/
 }
 
 void CreateCloth(vector <GLfloat>* a, vector <Particle> p) {
@@ -401,7 +442,7 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	//make OpenGL window
-	GLFWwindow* window = glfwCreateWindow(800, 800, "Sphere-stacks-and-slices", NULL, NULL);
+	GLFWwindow* window = glfwCreateWindow(800, 800, "Cloth Sim", NULL, NULL);
 	//is all OK?
 	if (window == NULL)
 	{
@@ -419,8 +460,9 @@ int main()
 
 	//once the OpenGL context is done, build the scene and compile shaders
 	vector <Particle> particles;
+	vector <Constraint> constraints;
 	CreateParticles(&particles, squares);
-	CreateConstraints(particles);
+	CreateConstraints(&particles, &constraints);
 	BuildScene(VBO, VAO, squares, particles);
 	int shaderProg = CompileShaders();
 	GLint modelviewParameter = glGetUniformLocation(shaderProg, "modelview");
@@ -464,7 +506,7 @@ int main()
 		ImGui::NewFrame();
 
 		// ImGUI window creation
-		ImGui::Begin("Sphere-stacks-and-slices");
+		ImGui::Begin("Cloth Sim");
 		//checkbox to render or not the scene
 		ImGui::Checkbox("Draw Scene", &drawScene);
 		//checkbox to render or not the scene
@@ -479,8 +521,9 @@ int main()
 		//color picker
 		if (ImGui::SliderInt("Squares", &squares, 2, 100, "%d", 0)) {
 			particles.clear();
+			constraints.clear();
 			CreateParticles(&particles, squares);
-			CreateConstraints(particles);
+			CreateConstraints(&particles, &constraints);
 
 			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
 		}
@@ -493,15 +536,16 @@ int main()
 		if (ImGui::ColorEdit4("Color", color)) { //set the new color only if it has changed
 			glUniform4f(glGetUniformLocation(shaderProg, "color"), color[0], color[1], color[2], color[3]);
 		}
+		// TODO deltaT
 
 		// Ends the window
 		ImGui::End();
 
 		// Perform a step of physics simulation and rebuild scene
-		auto endTime = chrono::system_clock::now();
-		chrono::duration<GLfloat> elapsedTime = startTime - endTime; // in seconds
-		GLfloat deltaTime = elapsedTime.count();
-		startTime = chrono::system_clock::now();
+		//auto endTime = chrono::system_clock::now();
+		//chrono::duration<GLfloat> elapsedTime = startTime - endTime; // in seconds
+		GLfloat deltaTime = 0.0001f;
+		//startTime = chrono::system_clock::now();
 
 		for (int i = 0; i < particles.size(); i++) {
 			spring::updateParticle(&particles[i], deltaTime);
