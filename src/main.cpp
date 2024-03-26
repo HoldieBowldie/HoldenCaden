@@ -1,10 +1,3 @@
-/*
-Sphere as stacks and slices 
-(C) Bedrich Benes 2022
-Purdue University
-bbenes@purdue.edu
-*/
-
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
@@ -25,13 +18,16 @@ bbenes@purdue.edu
 #include <math.h>
 #include <time.h>
 #include <string>
-#include <vector>			//Standard template library
+#include <vector>
 #include <array>
 
-#include "triangle.h"  //triangles
+#include "triangle.h"
 #include "helper.h"         
-#include "objGen.h"         //to save OBJ file format for 3D printing
+#include "objGen.h" 
 #include "trackball.h"
+
+#include "particle.h"
+#include "constraint.h"
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
@@ -42,38 +38,138 @@ using namespace std;
 TrackBallC trackball;
 bool mouseLeft, mouseMid, mouseRight;
 
-vector <TriangleC> tri;   //all the triangles will be stored here
+vector <TriangleC> tri;
 std::string filename = "geometry.obj";
 
-GLuint points = 0; //number of points to display the object
+GLuint points = 0;
 int pointSize = 5;
 int lineWidth = 1;
-int stacks = 5, slices = 5;
+int squares = 50;
 GLdouble mouseX, mouseY;
 
 //Vertex array object and vertex buffer object indices 
 GLuint VAO, VBO;
 
 
-inline void AddVertex(vector <GLfloat>* a, glm::vec3 A) //check this!
+inline void AddVertex(vector <GLfloat>* a, glm::vec3 A)
 {
 	a->push_back(A[0]); a->push_back(A[1]); a->push_back(A[2]);
 }
 
-void CreateSphere(vector <GLfloat>* a, int stacks, int slices)
+inline void AddParticle(vector <Particle>* a, Particle P)
+{
+
+	a->push_back(P);
+}
+
+//Set up particles and constraints
+void CreateParticles(vector <Particle>* a, int squares)
+{
+	Particle p;
+	glm::vec3 v;
+
+	GLfloat r = 1.f;
+
+	GLfloat deltaX = 1 / (GLfloat)squares;
+	GLfloat deltaZ = 1 / (GLfloat)squares;
+
+	for (GLuint i = 0; i < squares; i++)
+	{
+
+		GLfloat z = (i * deltaZ) - 0.5f;
+
+		for (GLuint j = 0; j < squares; j++)
+		{
+
+			GLfloat x = (j * deltaX) - 0.5f;
+
+			v = glm::vec3(r * x,
+				r,
+				r * z);
+
+			AddParticle(a, Particle(v, 0));
+			
+		}
+	}
+}
+
+void CreateConstraints(vector <Particle> p) {
+	for (int i = 0; i < p.size(); i++) 
+	{
+		if ((i % squares) > 0) {
+			p[i].AddConstraint(p[i - 1]);
+
+			if ((i / squares) > 0) {
+				p[i].AddConstraint(p[i - squares - 1]);
+			}
+			if ((i / squares) < (squares - 1)) {
+				p[i].AddConstraint(p[i + squares - 1]);
+			}
+		}
+		if ((i % squares) < (squares - 1)) {
+			p[i].AddConstraint(p[i + 1]);
+			if ((i / squares) > 0) {
+				p[i].AddConstraint(p[i - squares + 1]);
+			}
+			if ((i / squares) < (squares - 1)) {
+				p[i].AddConstraint(p[i + squares + 1]);
+			}
+		}
+		if ((i / squares) > 0) {
+			p[i].AddConstraint(p[i - squares]);
+		}
+		if ((i / squares) < (squares - 1)) {
+			p[i].AddConstraint(p[i + squares]);
+		}
+	}
+}
+
+void CreateCloth(vector <GLfloat>* a, vector <Particle> p) {
+
+	for (int i = 0; i < p.size() - (squares + 1); i++)
+	{
+		if (i % squares == squares - 1) {
+			continue;
+		}
+		//the first triangle
+		AddVertex(a, p[i].pos);
+		AddVertex(a, p[i + 1].pos);
+		AddVertex(a, p[i + squares].pos);
+		//the second triangle
+		AddVertex(a, p[i+1].pos);
+		AddVertex(a, p[i+squares].pos);
+		AddVertex(a, p[i+squares+1].pos);
+
+	}
+}
+
+void CreateSphere(vector <GLfloat>* a, int squares)
 {
 	glm::vec3 v;
 
 	GLfloat r = 1.f;
+
+	GLfloat deltaX = 1 / (GLfloat)squares;
+	GLfloat deltaZ = 1 / (GLfloat)squares;
+
+	/*
 	GLfloat deltaTheta = 2 * M_PI / (GLfloat)slices;
 	GLfloat deltaPhi = M_PI / (GLfloat)stacks;
+	*/
 
-	for (GLuint i = 0; i < stacks; i++)
+	for (GLuint i = 0; i < squares; i++)
 	{
-		GLfloat phi = i * deltaPhi;
-		for (GLuint j = 0; j < slices; j++)
+		//GLfloat phi = i * deltaPhi;
+
+		GLfloat z = i * deltaZ;
+
+		for (GLuint j = 0; j < squares; j++)
 		{
-			GLfloat theta = j * deltaTheta;
+			//GLfloat theta = j * deltaTheta;
+			
+			GLfloat x = j * deltaX;
+
+			/*
 			//the first triangle
 			v=glm::vec3(r * cos(theta) * sin(phi),
 				r * sin(theta) * sin(phi),
@@ -99,6 +195,34 @@ void CreateSphere(vector <GLfloat>* a, int stacks, int slices)
 			v = glm::vec3(r * cos(theta) * sin(phi+deltaPhi),
 				r * sin(theta) * sin(phi + deltaPhi),
 				r * cos(phi + deltaPhi));
+			AddVertex(a, v);
+			*/
+
+			//the first triangle
+			v = glm::vec3(r * x,
+				r,
+				r * z);
+			AddVertex(a, v);
+			v = glm::vec3(r * x,
+				r,
+				r * (z + deltaZ));
+			AddVertex(a, v);
+			v = glm::vec3(r * (x + deltaX),
+				r,
+				r * z);
+			AddVertex(a, v);
+			//the second triangle
+			v = glm::vec3(r * x,
+				r,
+				r * (z + deltaZ));
+			AddVertex(a, v);
+			v = glm::vec3(r * (x + deltaX),
+				r,
+				r * z);
+			AddVertex(a, v);
+			v = glm::vec3(r * (x + deltaX),
+				r,
+				r * (z + deltaZ));
 			AddVertex(a, v);
 		}
 	}
@@ -151,9 +275,10 @@ int CompileShaders() {
 	return shaderProg;
 }
 
-void BuildScene(GLuint& VBO, GLuint& VAO, int stacks, int slices) { //return VBO and VAO values n is the subdivision
+void BuildScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> particles) { //return VBO and VAO values n is the subdivision
 	vector<GLfloat> v;
-	CreateSphere(&v, stacks, slices);
+	//CreateSphere(&v, squares);
+	CreateCloth(&v, particles);
 	//now get it ready for saving as OBJ
 	tri.clear();
 	for (unsigned int i = 0; i < v.size(); i += 9) { //stride 3 - 3 vertices per triangle
@@ -281,7 +406,10 @@ int main()
 	glViewport(0, 0, 800, 800);
 
 	//once the OpenGL context is done, build the scene and compile shaders
-	BuildScene(VBO, VAO, stacks, slices);
+	vector <Particle> particles;
+	CreateParticles(&particles, squares);
+	CreateConstraints(particles);
+	BuildScene(VBO, VAO, squares, particles);
 	int shaderProg = CompileShaders();
 	GLint modelviewParameter = glGetUniformLocation(shaderProg, "modelview");
 
@@ -334,11 +462,8 @@ int main()
 			//ImGui::OpenPopup("Saved");
 		}
 		//color picker
-		if (ImGui::SliderInt("Stacks", &stacks, 1, 100, "%d", 0)) {
-			BuildScene(VBO, VAO, stacks, slices); //rebuild scene if the subdivision has changed
-		}
-		if (ImGui::SliderInt("Slices", &slices, 1, 100, "%d", 0)) {
-			BuildScene(VBO, VAO, stacks, slices); //rebuild scene if the subdivision has changed
+		if (ImGui::SliderInt("Squares", &squares, 1, 100, "%d", 0)) {
+			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
 		}
 		if (ImGui::SliderInt("point Size", &pointSize, 1, 10, "%d", 0)) {
 			glPointSize(pointSize); //set the new point size if it has been changed			
