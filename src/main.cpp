@@ -26,8 +26,9 @@
 #include "objGen.h" 
 #include "trackball.h"
 
-#include "particle.h"
-#include "constraint.h"
+#include "particle.cpp"
+#include "constraint.cpp"
+#include "springPhysics.h"
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
