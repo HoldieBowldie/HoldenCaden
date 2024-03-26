@@ -148,7 +148,7 @@
     <ClCompile Include="ImGui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="ImGui\imgui_tables.cpp" />
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
-    <ClCompile Include="particle.h" />
+    <ClCompile Include="Include\particle.h" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\helper.cpp" />
     <ClCompile Include="src\main.cpp" />
@@ -156,7 +156,7 @@
     <ClCompile Include="src\triangle.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="constraint.h" />
+    <ClInclude Include="Include\constraint.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
     <ClInclude Include="ImGui\imgui_impl_glfw.h" />
