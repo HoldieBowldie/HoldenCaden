@@ -547,9 +547,11 @@ int main()
 		GLfloat deltaTime = 0.0001f;
 		//startTime = chrono::system_clock::now();
 
+		vector <Particle> newParticles = particles;
 		for (int i = 0; i < particles.size(); i++) {
-			spring::updateParticle(&particles[i], deltaTime);
+			spring::updateParticle(&particles[i], &newParticles[i], deltaTime);
 		}
+		particles = newParticles;
 		
 		BuildScene(VBO, VAO, squares, particles);
 		// Done with physics step

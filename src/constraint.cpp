@@ -10,7 +10,7 @@
 Constraint::Constraint(void) {
 	a = NULL;
 	b = NULL;
-	k = 1.f;
+	k = 25.f;
 	restLength = 0.f;
 }
 

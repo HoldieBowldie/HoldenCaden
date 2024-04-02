@@ -27,7 +27,7 @@ public:
 	glm::vec3 pos; // position
 	glm::vec3 v = glm::vec3(0.f, 0.f, 0.f); // velocity
 	glm::vec3 a = glm::vec3(0.f, 0.f, 0.f); // acceleration
-	GLfloat m = 0.1f; // mass
+	GLfloat m = 0.001f; // mass
 	vector <Constraint> cons;
 
 	// constructors
