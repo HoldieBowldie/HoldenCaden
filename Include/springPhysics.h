@@ -1,4 +1,5 @@
-#pragma once
+#ifndef SPRINGPHYSICS_H
+#define SPRINGPHYSICS_H
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
@@ -27,7 +28,7 @@ namespace spring {
 	glm::vec3 g = glm::vec3(0.0f, -9.8f, 0.0f); // Gravity vector
 	glm::vec3 wind = glm::vec3(0.0f, 0.0f, 0.0f); // wind vector, 0 by default
 
-	GLfloat air = .05f; // air resistance constant
+	GLfloat air = .001f; // air resistance constant
 
 	// Update a particle's position, velocity, and acceleration.
 	void updateParticle(Particle* p, Particle* newP, GLfloat deltaTime) {
@@ -39,13 +40,13 @@ namespace spring {
 
 		p->pos = p->pos + (c1 * p->v * deltaTime); // x1
 
-		for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
 
 			glm::vec3 F = glm::vec3(0.0f, 0.0f, 0.0f); // force acting upon the particle
 
 			F += (p->m * g); // Add gravity
 			F += wind; // Add wind
-			F += -air * (p->v * p->v); // Add air resistance
+			//F += airDir * (-air * (p->v * p->v)); // Add air resistance
 
 			// Add spring forces
 
@@ -59,7 +60,7 @@ namespace spring {
 				}
 				
 
-				glm::normalize(dir);
+				dir = glm::normalize(dir);
 
 				F -= dir * (c.k * (c.length() - c.restLength));
 			}
@@ -70,9 +71,14 @@ namespace spring {
 			p->a = F / p->m;
 			*/
 
+			glm::vec3 airDir = F;
+			airDir = glm::normalize(airDir);
+
+			F += airDir * (-air * (p->v * p->v));
+
 			p->a = F / p->m;
 
-			switch (i)
+			switch (j)
 			{
 				case 0:
 					p->v = p->v + (d1 * p->a * deltaTime); // v1
@@ -93,4 +99,39 @@ namespace spring {
 
 		return;
 	}
+
+	int fixSprings(Particle* p) {
+		if (p->locked) {
+			return 0; // locked particles do not move
+		}
+
+		for (int i = 0; i < p->cons.size(); i++) {
+			Constraint c = p->cons[i];
+
+			glm::vec3 dir = p->pos - c.b->pos;
+
+			Particle* part = c.b; //other end of contraint
+
+			if (dir == glm::vec3(0.0f, 0.0f, 0.0f)) {
+				dir = p->pos - c.a->pos;
+				part = c.a;
+			}
+
+			dir = glm::normalize(dir);
+
+			if ((c.length() / c.restLength) > 1.1f) {
+				p->pos = part->pos + (dir * (c.restLength * 1.1f));
+				return 1;
+			}
+			else if ((c.length() / c.restLength) < 0.9f) {
+				p->pos = part->pos + (dir * (c.restLength * 0.9f));
+				return 1;
+			}
+
+		}
+
+		return 0;
+	}
 }
+
+#endif

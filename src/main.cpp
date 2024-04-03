@@ -551,6 +551,21 @@ int main()
 		for (int i = 0; i < particles.size(); i++) {
 			spring::updateParticle(&particles[i], &newParticles[i], deltaTime);
 		}
+		
+		/*
+		int j = 0;
+
+		while (j < newParticles.size()) {
+
+			if (spring::fixSprings(&newParticles[j]) == 1) {
+				j = 0;
+			}
+			else {
+				j++;
+			}
+		}
+		*/
+		
 		particles = newParticles;
 		
 		BuildScene(VBO, VAO, squares, particles);
