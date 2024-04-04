@@ -14,6 +14,8 @@
 
 #include <iostream>
 
+static int friction = 0;
+
 using namespace std;
 
 namespace spring {
@@ -27,7 +29,7 @@ namespace spring {
 	GLfloat d3 = 1.35120719196f;
 
 	glm::vec3 g = glm::vec3(0.0f, -9.8f, 0.0f); // Gravity vector
-	glm::vec3 wind = glm::vec3(0.0f, 0.0f, 0.0f); // wind vector, 0 by default
+	glm::vec3 wind = glm::vec3(0.01f, 0.0f, 0.0f); // wind vector, 0 by default
 
 	GLfloat air = .001f; // air resistance constant
 
@@ -93,28 +95,8 @@ namespace spring {
 			}
 		}
 
-		// COLLISION DETECTION
-		// iterate through all scene objects, if collision detected, stop movement
-		for (int i = 0; i < spheres.size(); i++) {
-			Sphere s = spheres.at(i);
-			if (s.collidesWith(p)) {
-				p->pos = tempPos;
-				p->v = glm::vec3(0.f, 0.f, 0.f);
-				continue;
-			}
-		}
-
-		newP->pos = p->pos;
-		newP->v = p->v;
-		p->pos = tempPos;
-
-		return;
-	}
-
-	int fixSprings(Particle* p) {
-		if (p->locked) {
-			return 0; // locked particles do not move
-		}
+		//MAXIMUM STRETCH DETECTION
+		//go through all constraints, adjust if necessary
 
 		for (int i = 0; i < p->cons.size(); i++) {
 			Constraint c = p->cons[i];
@@ -132,16 +114,72 @@ namespace spring {
 
 			if ((c.length() / c.restLength) > 1.1f) {
 				p->pos = part->pos + (dir * (c.restLength * 1.1f));
-				return 1;
+				continue;
 			}
 			else if ((c.length() / c.restLength) < 0.9f) {
 				p->pos = part->pos + (dir * (c.restLength * 0.9f));
-				return 1;
+				continue;
+			}
+		}
+
+		// COLLISION DETECTION
+		// iterate through all scene objects, if collision detected, stop movement
+		for (int i = 0; i < spheres.size(); i++) {
+			Sphere s = spheres.at(i);
+			if (s.collidesWith(p)) {
+				if (friction == 1) {
+					p->pos = tempPos;
+					p->v = glm::vec3(0.f, 0.f, 0.f);
+				}
+				else {
+					p->pos = s.pos + (glm::normalize(p->pos - s.pos) * s.r);
+				}
+				//p->v = glm::vec3(0.f, 0.f, 0.f);
+				continue;
+			}
+		}
+		
+
+		newP->pos = p->pos;
+		newP->v = p->v;
+		p->pos = tempPos;
+
+		return;
+	}
+
+	int fixSprings(Particle* p) {
+		if (p->locked) {
+			return 0; // locked particles do not move
+		}
+
+		int ret = 0;
+
+		for (int i = 0; i < p->cons.size(); i++) {
+			Constraint c = p->cons[i];
+
+			glm::vec3 dir = p->pos - c.b->pos;
+
+			Particle* part = c.b; //other end of contraint
+
+			if (dir == glm::vec3(0.0f, 0.0f, 0.0f)) {
+				dir = p->pos - c.a->pos;
+				part = c.a;
+			}
+
+			dir = glm::normalize(dir);
+
+			if ((c.length() / c.restLength) > 1.1f) {
+				p->pos = part->pos + (dir * (c.restLength * 1.1f));
+				ret = 1;
+			}
+			else if ((c.length() / c.restLength) < 0.9f) {
+				p->pos = part->pos + (dir * (c.restLength * 0.9f));
+				ret = 1;
 			}
 
 		}
 
-		return 0;
+		return ret;
 	}
 }
 

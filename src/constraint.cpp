@@ -24,7 +24,7 @@ Constraint::Constraint(Particle* _a, Particle* _b, GLfloat _k) : a(_a), b(_b), k
 Constraint::Constraint(Particle* _a, Particle* _b) : a(_a), b(_b) {
 	a = _a;
 	b = _b;
-	k = 15.0f;
+	k = 25.0f;
 	restLength = glm::length(a->pos - b->pos);
 }
 

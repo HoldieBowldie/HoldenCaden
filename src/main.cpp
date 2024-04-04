@@ -56,6 +56,8 @@ GLfloat deltaT = 0.0001f;
 //Vertex array object and vertex buffer object indices 
 GLuint VAO, VBO;
 
+//static int friction = 0;
+
 
 inline void AddVertex(vector <GLfloat>* a, glm::vec3 A)
 {
@@ -481,6 +483,16 @@ int main()
 
 			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
 		}
+		/*
+		if (ImGui::SliderInt("Friction", &friction, 0, 1, "%d", 0)) {
+			particles.clear();
+			constraints.clear();
+			CreateParticles(&particles, squares);
+			CreateConstraints(&particles, &constraints);
+
+			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
+		}
+		*/
 		if (ImGui::SliderInt("point Size", &pointSize, 1, 10, "%d", 0)) {
 			glPointSize(pointSize); //set the new point size if it has been changed			
 		}
