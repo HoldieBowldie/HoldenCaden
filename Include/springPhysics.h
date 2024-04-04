@@ -92,6 +92,14 @@ namespace spring {
 			}
 		}
 
+		// TODO check collision w/ objects
+		// HARDCODED JUST TO SEE IF IT WORKS !!!!
+		if (glm::distance(p->pos, glm::vec3(0.0f, 0.0f, 0.0f)) < 1.0f) {
+			p->pos = tempPos;
+			p->v = glm::vec3(0.0f, 0.0f, 0.0f);
+		}
+		// if collision detected, don't move
+
 		newP->pos = p->pos;
 		newP->v = p->v;
 		p->pos = tempPos;

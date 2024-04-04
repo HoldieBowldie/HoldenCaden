@@ -48,7 +48,7 @@ std::string filename = "geometry.obj";
 GLuint points = 0;
 int pointSize = 5;
 int lineWidth = 1;
-int squares = 30;
+int squares = 30; // controls cloth resolution
 GLdouble mouseX, mouseY;
 GLfloat deltaT = 0.0001f;
 
@@ -77,36 +77,42 @@ void CreateParticles(vector <Particle>* a, int squares)
 	Particle p;
 	glm::vec3 v;
 
-	GLfloat r = 1.f;
+	GLfloat r = 2.0f;
+	GLfloat h = 1.5f;
 
-	GLfloat deltaX = 1 / (GLfloat)squares;
-	GLfloat deltaZ = 1 / (GLfloat)squares;
+	GLfloat deltaX = r / (GLfloat)squares;
+	GLfloat deltaZ = r / (GLfloat)squares;
 
 	for (GLuint i = 0; i < squares; i++)
 	{
 
-		GLfloat z = (i * deltaZ) - 0.5f;
+		GLfloat z = (i * deltaZ) - (r / 2.f);
 
 		for (GLuint j = 0; j < squares; j++)
 		{
 
-			GLfloat x = (j * deltaX) - 0.5f;
+			GLfloat x = (j * deltaX) - (r / 2.f);
 
 			v = glm::vec3(r * x,
-				r,
+				h,
 				r * z);
 
+			
 			// lock two of the corners
 			if ((i == 0) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
+			// lock two more
+			/*
 			else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
+			*/
 			else {
 				AddParticle(a, Particle(v, false));
 			}
 			
+			//AddParticle(a, Particle(v, false));
 			
 		}
 	}
@@ -168,35 +174,32 @@ void CreateCloth(vector <GLfloat>* a, vector <Particle> p) {
 	}
 }
 
-void CreateSphere(vector <GLfloat>* a, int squares)
+void CreateSphere(vector <GLfloat>* a)
 {
 	glm::vec3 v;
 
+	int s = 20;
+
 	GLfloat r = 1.f;
 
-	GLfloat deltaX = 1 / (GLfloat)squares;
-	GLfloat deltaZ = 1 / (GLfloat)squares;
+	GLfloat deltaX = 1 / (GLfloat)s;
+	GLfloat deltaZ = 1 / (GLfloat)s;
 
-	/*
-	GLfloat deltaTheta = 2 * M_PI / (GLfloat)slices;
-	GLfloat deltaPhi = M_PI / (GLfloat)stacks;
-	*/
+	
+	GLfloat deltaTheta = 2 * M_PI / (GLfloat)s;
+	GLfloat deltaPhi = M_PI / (GLfloat)s;
+	
 
-	for (GLuint i = 0; i < squares; i++)
+	for (GLuint i = 0; i < s; i++)
 	{
-		//GLfloat phi = i * deltaPhi;
+		GLfloat phi = i * deltaPhi;
 
-		GLfloat z = i * deltaZ;
-
-		for (GLuint j = 0; j < squares; j++)
+		for (GLuint j = 0; j < s; j++)
 		{
-			//GLfloat theta = j * deltaTheta;
-			
-			GLfloat x = j * deltaX;
+			GLfloat theta = j * deltaTheta;
 
-			/*
 			//the first triangle
-			v=glm::vec3(r * cos(theta) * sin(phi),
+			v = glm::vec3(r * cos(theta) * sin(phi),
 				r * sin(theta) * sin(phi),
 				r * cos(phi));
 			AddVertex(a, v);
@@ -217,37 +220,9 @@ void CreateSphere(vector <GLfloat>* a, int squares)
 				r * sin(theta + deltaTheta) * sin(phi + deltaPhi),
 				r * cos(phi + deltaPhi));
 			AddVertex(a, v);
-			v = glm::vec3(r * cos(theta) * sin(phi+deltaPhi),
+			v = glm::vec3(r * cos(theta) * sin(phi + deltaPhi),
 				r * sin(theta) * sin(phi + deltaPhi),
 				r * cos(phi + deltaPhi));
-			AddVertex(a, v);
-			*/
-
-			//the first triangle
-			v = glm::vec3(r * x,
-				r,
-				r * z);
-			AddVertex(a, v);
-			v = glm::vec3(r * x,
-				r,
-				r * (z + deltaZ));
-			AddVertex(a, v);
-			v = glm::vec3(r * (x + deltaX),
-				r,
-				r * z);
-			AddVertex(a, v);
-			//the second triangle
-			v = glm::vec3(r * x,
-				r,
-				r * (z + deltaZ));
-			AddVertex(a, v);
-			v = glm::vec3(r * (x + deltaX),
-				r,
-				r * z);
-			AddVertex(a, v);
-			v = glm::vec3(r * (x + deltaX),
-				r,
-				r * (z + deltaZ));
 			AddVertex(a, v);
 		}
 	}
@@ -302,7 +277,7 @@ int CompileShaders() {
 
 void BuildScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> particles) { //return VBO and VAO values n is the subdivision
 	vector<GLfloat> v;
-	//CreateSphere(&v, squares);
+	//CreateSphere(&v);
 	CreateCloth(&v, particles);
 	//now get it ready for saving as OBJ
 	tri.clear();
@@ -519,8 +494,6 @@ int main()
 			spring::updateParticle(&particles[i], &newParticles[i], deltaT);
 		}
 
-
-		
 		particles = newParticles;
 		
 		BuildScene(VBO, VAO, squares, particles);
