@@ -29,6 +29,7 @@
 #include "particle.cpp"
 #include "constraint.cpp"
 #include "springPhysics.h"
+#include "objects.h"
 
 #include <chrono>
 #include <ctime>
@@ -97,22 +98,21 @@ void CreateParticles(vector <Particle>* a, int squares)
 				h,
 				r * z);
 
-			
+			/*
 			// lock two of the corners
 			if ((i == 0) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
 			// lock two more
-			/*
 			else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
-			*/
 			else {
 				AddParticle(a, Particle(v, false));
 			}
+			*/
 			
-			//AddParticle(a, Particle(v, false));
+			AddParticle(a, Particle(v, false));
 			
 		}
 	}
@@ -405,11 +405,18 @@ int main()
 	//Set the viewport
 	glViewport(0, 0, 800, 800);
 
-	//once the OpenGL context is done, build the scene and compile shaders
+	// once the OpenGL context is done, build the scene and compile shaders
+	// the cloth
 	vector <Particle> particles;
 	vector <Constraint> constraints;
 	CreateParticles(&particles, squares);
 	CreateConstraints(&particles, &constraints);
+
+	// other objects for the cloth to collide with
+	vector <Sphere> spheres;
+	spheres.push_back(Sphere(glm::vec3(0.5f, 0.f, 0.f), 1.0f));
+	spheres.push_back(Sphere(glm::vec3(-0.75f, 0.5f, 0.25f), 0.8f));
+
 	BuildScene(VBO, VAO, squares, particles);
 	int shaderProg = CompileShaders();
 	GLint modelviewParameter = glGetUniformLocation(shaderProg, "modelview");
@@ -491,7 +498,7 @@ int main()
 		// Perform a step of physics simulation and rebuild scene
 		vector <Particle> newParticles = particles;
 		for (int i = 0; i < particles.size(); i++) {
-			spring::updateParticle(&particles[i], &newParticles[i], deltaT);
+			spring::updateParticle(&particles[i], &newParticles[i], spheres, deltaT);
 		}
 
 		particles = newParticles;

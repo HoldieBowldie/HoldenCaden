@@ -6,6 +6,7 @@
 
 #include "particle.h"
 #include "constraint.h"
+#include "objects.h";
 
 #include <chrono>
 #include <ctime>
@@ -31,7 +32,7 @@ namespace spring {
 	GLfloat air = .001f; // air resistance constant
 
 	// Update a particle's position, velocity, and acceleration.
-	void updateParticle(Particle* p, Particle* newP, GLfloat deltaTime) {
+	void updateParticle(Particle* p, Particle* newP, vector<Sphere> spheres, GLfloat deltaTime) {
 		if (p->locked) {
 			return; // locked particles do not move
 		}
@@ -92,18 +93,20 @@ namespace spring {
 			}
 		}
 
-		// TODO check collision w/ objects
-		// HARDCODED JUST TO SEE IF IT WORKS !!!!
-		if (glm::distance(p->pos, glm::vec3(0.0f, 0.0f, 0.0f)) < 1.0f) {
-			p->pos = tempPos;
-			p->v = glm::vec3(0.0f, 0.0f, 0.0f);
+		// COLLISION DETECTION
+		// iterate through all scene objects, if collision detected, stop movement
+		for (int i = 0; i < spheres.size(); i++) {
+			Sphere s = spheres.at(i);
+			if (s.collidesWith(p)) {
+				p->pos = tempPos;
+				p->v = glm::vec3(0.f, 0.f, 0.f);
+				continue;
+			}
 		}
-		// if collision detected, don't move
 
 		newP->pos = p->pos;
 		newP->v = p->v;
 		p->pos = tempPos;
-		
 
 		return;
 	}
