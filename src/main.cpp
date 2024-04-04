@@ -48,8 +48,9 @@ std::string filename = "geometry.obj";
 GLuint points = 0;
 int pointSize = 5;
 int lineWidth = 1;
-int squares = 3;
+int squares = 30;
 GLdouble mouseX, mouseY;
+GLfloat deltaT = 0.0001f;
 
 //Vertex array object and vertex buffer object indices 
 GLuint VAO, VBO;
@@ -99,6 +100,9 @@ void CreateParticles(vector <Particle>* a, int squares)
 			if ((i == 0) && ((j == 0) || (j % squares == squares - 1))) {
 				AddParticle(a, Particle(v, true));
 			}
+			else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1))) {
+				AddParticle(a, Particle(v, true));
+			}
 			else {
 				AddParticle(a, Particle(v, false));
 			}
@@ -109,7 +113,6 @@ void CreateParticles(vector <Particle>* a, int squares)
 }
 
 void CreateConstraints(vector <Particle> *p, vector <Constraint> *c) {
-	// TODO rewrite this to not create duplicate constraints
 	Particle* p1;
 	Particle* p2;
 	Constraint x;
@@ -144,37 +147,6 @@ void CreateConstraints(vector <Particle> *p, vector <Constraint> *c) {
 			p1->AddConstraint(x); p2->AddConstraint(x); AddConstraint(c, x);
 		}
 	}
-
-	/*
-	for (int i = 0; i < p.size(); i++) 
-	{
-		if ((i % squares) > 0) {
-			p[i].AddConstraint(p[i - 1], c);
-
-			if ((i / squares) > 0) {
-				p[i].AddConstraint(p[i - squares - 1], c);
-			}
-			if ((i / squares) < (squares - 1)) {
-				p[i].AddConstraint(p[i + squares - 1], c);
-			}
-		}
-		if ((i % squares) < (squares - 1)) {
-			p[i].AddConstraint(p[i + 1], c);
-			if ((i / squares) > 0) {
-				p[i].AddConstraint(p[i - squares + 1], c);
-			}
-			if ((i / squares) < (squares - 1)) {
-				p[i].AddConstraint(p[i + squares + 1], c);
-			}
-		}
-		if ((i / squares) > 0) {
-			p[i].AddConstraint(p[i - squares], c);
-		}
-		if ((i / squares) < (squares - 1)) {
-			p[i].AddConstraint(p[i + squares], c);
-		}
-	}
-	*/
 }
 
 void CreateCloth(vector <GLfloat>* a, vector <Particle> p) {
@@ -536,35 +508,18 @@ int main()
 		if (ImGui::ColorEdit4("Color", color)) { //set the new color only if it has changed
 			glUniform4f(glGetUniformLocation(shaderProg, "color"), color[0], color[1], color[2], color[3]);
 		}
-		// TODO deltaT
+		if (ImGui::SliderFloat("deltaTime", &deltaT, 0.0f, 0.001f, "%.5f")) {}
 
 		// Ends the window
 		ImGui::End();
 
 		// Perform a step of physics simulation and rebuild scene
-		//auto endTime = chrono::system_clock::now();
-		//chrono::duration<GLfloat> elapsedTime = startTime - endTime; // in seconds
-		GLfloat deltaTime = 0.0001f;
-		//startTime = chrono::system_clock::now();
-
 		vector <Particle> newParticles = particles;
 		for (int i = 0; i < particles.size(); i++) {
-			spring::updateParticle(&particles[i], &newParticles[i], deltaTime);
+			spring::updateParticle(&particles[i], &newParticles[i], deltaT);
 		}
-		
-		/*
-		int j = 0;
 
-		while (j < newParticles.size()) {
 
-			if (spring::fixSprings(&newParticles[j]) == 1) {
-				j = 0;
-			}
-			else {
-				j++;
-			}
-		}
-		*/
 		
 		particles = newParticles;
 		
