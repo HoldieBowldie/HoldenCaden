@@ -4,6 +4,8 @@
 #include "constraint.h"
 #include "particle.h"
 
+GLfloat defaultK = 50.0f;
+
 // Constraints between particles, their lengths, and their elasticity
 
 // constructors
@@ -24,7 +26,7 @@ Constraint::Constraint(Particle* _a, Particle* _b, GLfloat _k) : a(_a), b(_b), k
 Constraint::Constraint(Particle* _a, Particle* _b) : a(_a), b(_b) {
 	a = _a;
 	b = _b;
-	k = 25.0f;
+	k = defaultK;
 	restLength = glm::length(a->pos - b->pos);
 }
 

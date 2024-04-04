@@ -14,7 +14,8 @@
 
 #include <iostream>
 
-static int friction = 0;
+bool friction = false;
+bool enableMinMaxStretch = true;
 
 using namespace std;
 
@@ -97,44 +98,45 @@ namespace spring {
 
 		//MAXIMUM STRETCH DETECTION
 		//go through all constraints, adjust if necessary
+		if (enableMinMaxStretch) {
+			for (int i = 0; i < p->cons.size(); i++) {
+				Constraint c = p->cons[i];
 
-		for (int i = 0; i < p->cons.size(); i++) {
-			Constraint c = p->cons[i];
+				glm::vec3 dir = p->pos - c.b->pos;
 
-			glm::vec3 dir = p->pos - c.b->pos;
+				Particle* part = c.b; //other end of contraint
 
-			Particle* part = c.b; //other end of contraint
+				if (dir == glm::vec3(0.0f, 0.0f, 0.0f)) {
+					dir = p->pos - c.a->pos;
+					part = c.a;
+				}
 
-			if (dir == glm::vec3(0.0f, 0.0f, 0.0f)) {
-				dir = p->pos - c.a->pos;
-				part = c.a;
-			}
+				dir = glm::normalize(dir);
 
-			dir = glm::normalize(dir);
-
-			if ((c.length() / c.restLength) > 1.1f) {
-				p->pos = part->pos + (dir * (c.restLength * 1.1f));
-				continue;
-			}
-			else if ((c.length() / c.restLength) < 0.9f) {
-				p->pos = part->pos + (dir * (c.restLength * 0.9f));
-				continue;
+				if ((c.length() / c.restLength) > 1.1f) {
+					p->pos = part->pos + (dir * (c.restLength * 1.1f));
+					continue;
+				}
+				else if ((c.length() / c.restLength) < 0.9f) {
+					p->pos = part->pos + (dir * (c.restLength * 0.9f));
+					continue;
+				}
 			}
 		}
 
 		// COLLISION DETECTION
-		// iterate through all scene objects, if collision detected, stop movement
 		for (int i = 0; i < spheres.size(); i++) {
 			Sphere s = spheres.at(i);
 			if (s.collidesWith(p)) {
 				if (friction == 1) {
+					// sticky collisions - return point to where it was
 					p->pos = tempPos;
 					p->v = glm::vec3(0.f, 0.f, 0.f);
 				}
 				else {
+					// slippery collisions - push point away from sphere
 					p->pos = s.pos + (glm::normalize(p->pos - s.pos) * s.r);
 				}
-				//p->v = glm::vec3(0.f, 0.f, 0.f);
 				continue;
 			}
 		}

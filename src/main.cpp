@@ -47,7 +47,7 @@ vector <TriangleC> tri;
 std::string filename = "geometry.obj";
 
 GLuint points = 0;
-int pointSize = 5;
+int pointSize = 1;
 int lineWidth = 1;
 int squares = 30; // controls cloth resolution
 GLdouble mouseX, mouseY;
@@ -56,7 +56,17 @@ GLfloat deltaT = 0.0001f;
 //Vertex array object and vertex buffer object indices 
 GLuint VAO, VBO;
 
-//static int friction = 0;
+extern bool friction; // For determining how the cloth collides with spheres
+bool drawSpheres = true; // Whether to draw spheres or just leave them as invisible boundaries
+
+// Used for the dropdown to determine how the cloth is made
+const char* lockModes[] = { "No corners locked", "2 corners locked", "4 corners locked" };
+const char* currentLockMode = lockModes[0];
+int lock = 0;
+
+extern bool enableMinMaxStretch;
+
+extern GLfloat defaultK; // determines stretchiness of constraints
 
 
 inline void AddVertex(vector <GLfloat>* a, glm::vec3 A)
@@ -100,22 +110,21 @@ void CreateParticles(vector <Particle>* a, int squares)
 				h,
 				r * z);
 
-			/*
-			// lock two of the corners
-			if ((i == 0) && ((j == 0) || (j % squares == squares - 1))) {
-				AddParticle(a, Particle(v, true));
-			}
-			// lock two more
-			else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1))) {
-				AddParticle(a, Particle(v, true));
-			}
-			else {
+			if (lock == 0) {
 				AddParticle(a, Particle(v, false));
 			}
-			*/
-			
-			AddParticle(a, Particle(v, false));
-			
+			else {
+				// lock two of the corners
+				if ((i == 0) && ((j == 0) || (j % squares == squares - 1)) && (lock != 0)) {
+					AddParticle(a, Particle(v, true));
+				}
+				else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1)) && (lock == 2)) {
+					AddParticle(a, Particle(v, true));
+				}
+				else {
+					AddParticle(a, Particle(v, false));
+				}
+			}	
 		}
 	}
 }
@@ -176,21 +185,27 @@ void CreateCloth(vector <GLfloat>* a, vector <Particle> p) {
 	}
 }
 
-void CreateSphere(vector <GLfloat>* a)
+void AddSphere(glm::vec3 pos, GLfloat r, vector<Sphere>* spheres) {
+	spheres->push_back(Sphere(pos, r));
+}
+
+// Draw a sphere at the designated location, then add a sphere to the list of spheres
+void CreateSphere(vector <GLfloat>* a, Sphere sphere)
 {
 	glm::vec3 v;
 
-	int s = 20;
+	GLfloat r = sphere.r;
+	GLfloat x = sphere.pos[0];
+	GLfloat y = sphere.pos[1];
+	GLfloat z = sphere.pos[2];
 
-	GLfloat r = 1.f;
+	int s = (int) fabsf(r * 15.f) + 1;
 
 	GLfloat deltaX = 1 / (GLfloat)s;
 	GLfloat deltaZ = 1 / (GLfloat)s;
 
-	
 	GLfloat deltaTheta = 2 * M_PI / (GLfloat)s;
 	GLfloat deltaPhi = M_PI / (GLfloat)s;
-	
 
 	for (GLuint i = 0; i < s; i++)
 	{
@@ -201,30 +216,30 @@ void CreateSphere(vector <GLfloat>* a)
 			GLfloat theta = j * deltaTheta;
 
 			//the first triangle
-			v = glm::vec3(r * cos(theta) * sin(phi),
-				r * sin(theta) * sin(phi),
-				r * cos(phi));
+			v = glm::vec3(x + r * cos(theta) * sin(phi),
+				y + r * sin(theta) * sin(phi),
+				z + r * cos(phi));
 			AddVertex(a, v);
-			v = glm::vec3(r * cos(theta + deltaTheta) * sin(phi),
-				r * sin(theta + deltaTheta) * sin(phi),
-				r * cos(phi));
+			v = glm::vec3(x + r * cos(theta + deltaTheta) * sin(phi),
+				y + r * sin(theta + deltaTheta) * sin(phi),
+				z + r * cos(phi));
 			AddVertex(a, v);
-			v = glm::vec3(r * cos(theta + deltaTheta) * sin(phi + deltaPhi),
-				r * sin(theta + deltaTheta) * sin(phi + deltaPhi),
-				r * cos(phi + deltaPhi));
+			v = glm::vec3(x + r * cos(theta + deltaTheta) * sin(phi + deltaPhi),
+				y + r * sin(theta + deltaTheta) * sin(phi + deltaPhi),
+				z + r * cos(phi + deltaPhi));
 			AddVertex(a, v);
 			//the second triangle
-			v = glm::vec3(r * cos(theta) * sin(phi),
-				r * sin(theta) * sin(phi),
-				r * cos(phi));
+			v = glm::vec3(x + r * cos(theta) * sin(phi),
+				y + r * sin(theta) * sin(phi),
+				z + r * cos(phi));
 			AddVertex(a, v);
-			v = glm::vec3(r * cos(theta + deltaTheta) * sin(phi + deltaPhi),
-				r * sin(theta + deltaTheta) * sin(phi + deltaPhi),
-				r * cos(phi + deltaPhi));
+			v = glm::vec3(x + r * cos(theta + deltaTheta) * sin(phi + deltaPhi),
+				y + r * sin(theta + deltaTheta) * sin(phi + deltaPhi),
+				z + r * cos(phi + deltaPhi));
 			AddVertex(a, v);
-			v = glm::vec3(r * cos(theta) * sin(phi + deltaPhi),
-				r * sin(theta) * sin(phi + deltaPhi),
-				r * cos(phi + deltaPhi));
+			v = glm::vec3(x + r * cos(theta) * sin(phi + deltaPhi),
+				y + r * sin(theta) * sin(phi + deltaPhi),
+				z + r * cos(phi + deltaPhi));
 			AddVertex(a, v);
 		}
 	}
@@ -277,9 +292,16 @@ int CompileShaders() {
 	return shaderProg;
 }
 
-void BuildScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> particles) { //return VBO and VAO values n is the subdivision
+void BuildScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> particles, vector<Sphere> spheres) { //return VBO and VAO values n is the subdivision
 	vector<GLfloat> v;
-	//CreateSphere(&v);
+	
+	if (drawSpheres) {
+		for (int i = 0; i < spheres.size(); i++) {
+			Sphere s = spheres.at(i);
+			CreateSphere(&v, s);
+		}
+	}
+
 	CreateCloth(&v, particles);
 	//now get it ready for saving as OBJ
 	tri.clear();
@@ -380,6 +402,14 @@ void MouseButtonCallback(GLFWwindow* window, int button, int state, int mods) {
 	}
 }
 
+void ResetScene(GLuint& VBO, GLuint& VAO, int squares, vector<Particle> *particles, vector<Constraint> *constraints, vector<Sphere> *spheres) {
+	particles->clear();
+	constraints->clear();
+	CreateParticles(particles, squares);
+	CreateConstraints(particles, constraints);
+
+	BuildScene(VBO, VAO, squares, *particles, *spheres); //rebuild scene if the subdivision has changed
+}
 
 int main()
 {
@@ -416,10 +446,9 @@ int main()
 
 	// other objects for the cloth to collide with
 	vector <Sphere> spheres;
-	spheres.push_back(Sphere(glm::vec3(0.5f, 0.f, 0.f), 1.0f));
-	spheres.push_back(Sphere(glm::vec3(-0.75f, 0.5f, 0.25f), 0.8f));
+	AddSphere(glm::vec3(0.f, 0.f, 0.f), 1.f, &spheres);
 
-	BuildScene(VBO, VAO, squares, particles);
+	BuildScene(VBO, VAO, squares, particles, spheres);
 	int shaderProg = CompileShaders();
 	GLint modelviewParameter = glGetUniformLocation(shaderProg, "modelview");
 
@@ -448,9 +477,6 @@ int main()
 	glfwSetCursorPosCallback(window, MouseCallback);
 	glfwSetMouseButtonCallback(window, MouseButtonCallback);;
 
-	// record start time for physics calcs
-	auto startTime = chrono::system_clock::now();
-
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -470,39 +496,51 @@ int main()
 			if (filled) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			else glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		}
+		ImGui::Checkbox("Draw Spheres", &drawSpheres);
+		/*
+		if (ImGui::Checkbox("Friction", &friction)) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		*/
+		if (ImGui::Checkbox("Enable Min-Max Stretch", &enableMinMaxStretch)) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		/*
 		if (ImGui::Button("Save OBJ")) {
 			SaveOBJ(&tri, filename);
 			//ImGui::OpenPopup("Saved");
 		}
-		//color picker
-		if (ImGui::SliderInt("Squares", &squares, 2, 100, "%d", 0)) {
-			particles.clear();
-			constraints.clear();
-			CreateParticles(&particles, squares);
-			CreateConstraints(&particles, &constraints);
-
-			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
-		}
-		/*
-		if (ImGui::SliderInt("Friction", &friction, 0, 1, "%d", 0)) {
-			particles.clear();
-			constraints.clear();
-			CreateParticles(&particles, squares);
-			CreateConstraints(&particles, &constraints);
-
-			BuildScene(VBO, VAO, squares, particles); //rebuild scene if the subdivision has changed
-		}
 		*/
-		if (ImGui::SliderInt("point Size", &pointSize, 1, 10, "%d", 0)) {
+		if (ImGui::BeginCombo("Locked Corners", currentLockMode)) {
+			for (int i = 0; i < 3; i++) {
+				bool isSelected = (currentLockMode == lockModes[i]);
+				if (ImGui::Selectable(lockModes[i], isSelected)) {
+					currentLockMode = lockModes[i];
+					lock = i;
+					ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+				}
+				if (isSelected) {
+					ImGui::SetItemDefaultFocus();
+				}
+			}
+			ImGui::EndCombo();
+		}
+		if (ImGui::SliderInt("Cloth Resolution", &squares, 2, 100, "%d", 0)) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		if (ImGui::SliderInt("Point Size", &pointSize, 1, 10, "%d", 0)) {
 			glPointSize(pointSize); //set the new point size if it has been changed			
 		}
-		if (ImGui::SliderInt("line width", &lineWidth, 1, 10, "%d", 0)) {
+		if (ImGui::SliderInt("Line Width", &lineWidth, 1, 10, "%d", 0)) {
 			glLineWidth(lineWidth); //set the new point size if it has been changed			
 		}
 		if (ImGui::ColorEdit4("Color", color)) { //set the new color only if it has changed
 			glUniform4f(glGetUniformLocation(shaderProg, "color"), color[0], color[1], color[2], color[3]);
 		}
-		if (ImGui::SliderFloat("deltaTime", &deltaT, 0.0f, 0.001f, "%.5f")) {}
+		ImGui::SliderFloat("Time Step", &deltaT, 0.0f, 0.001f, "%.5f");
+		if (ImGui::SliderFloat("Constraint Elasticity", &defaultK, 1.f, 100.f, "%.1f")) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
 
 		// Ends the window
 		ImGui::End();
@@ -515,7 +553,7 @@ int main()
 
 		particles = newParticles;
 		
-		BuildScene(VBO, VAO, squares, particles);
+		BuildScene(VBO, VAO, squares, particles, spheres);
 		// Done with physics step
 
 		//set the projection matrix
