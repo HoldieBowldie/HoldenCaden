@@ -16,27 +16,32 @@ using namespace std;
 
 Particle::Particle(void) {
 	pos = glm::vec3();
+	lastPos = pos;
 	locked = false;
 }
 
 Particle::Particle(glm::vec3 _pos) {
 	pos = _pos;
+	lastPos = pos;
 	locked = false;
 }
 
 Particle::Particle(glm::vec3 _pos, bool _locked) {
 	pos = _pos;
+	lastPos = pos;
 	locked = _locked;
 }
 
 Particle::Particle(glm::vec3 _pos, GLfloat _m) {
 	pos = _pos;
+	lastPos = pos;
 	m = _m;
 	locked = false;
 }
 
 Particle::Particle(glm::vec3 _pos, GLfloat _m, bool _locked) {
 	pos = _pos;
+	lastPos = pos;
 	m = _m;
 	locked = _locked;
 }

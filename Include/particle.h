@@ -25,6 +25,7 @@ public:
 	// variables
 	bool locked; // whether the particle is able to move
 	glm::vec3 pos; // position
+	glm::vec3 lastPos; // position on previous physics step
 	glm::vec3 v = glm::vec3(0.f, 0.f, 0.f); // velocity
 	glm::vec3 a = glm::vec3(0.f, 0.f, 0.f); // acceleration
 	GLfloat m = .1f; // mass

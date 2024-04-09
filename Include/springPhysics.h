@@ -17,6 +17,8 @@
 bool friction = false;
 bool enableMinMaxStretch = true;
 
+glm::vec3 wind = glm::vec3(0.0f, 0.0f, 0.0f);
+
 using namespace std;
 
 namespace spring {
@@ -30,7 +32,6 @@ namespace spring {
 	GLfloat d3 = 1.35120719196f;
 
 	glm::vec3 g = glm::vec3(0.0f, -9.8f, 0.0f); // Gravity vector
-	glm::vec3 wind = glm::vec3(0.01f, 0.0f, 0.0f); // wind vector, 0 by default
 
 	GLfloat air = .001f; // air resistance constant
 
@@ -135,7 +136,8 @@ namespace spring {
 				}
 				else {
 					// slippery collisions - push point away from sphere
-					p->pos = s.pos + (glm::normalize(p->pos - s.pos) * s.r);
+					glm::vec3 normal = glm::normalize(p->pos - s.pos); // normal at point of collision
+					p->pos = s.pos + (normal * s.r);
 				}
 				continue;
 			}

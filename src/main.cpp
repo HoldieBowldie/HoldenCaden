@@ -31,8 +31,7 @@
 #include "springPhysics.h"
 #include "objects.h"
 
-#include <chrono>
-#include <ctime>
+#include <omp.h>
 
 #pragma warning(disable : 4996)
 #pragma comment(lib, "glfw3.lib")
@@ -67,6 +66,14 @@ int lock = 0;
 extern bool enableMinMaxStretch;
 
 extern GLfloat defaultK; // determines stretchiness of constraints
+GLfloat particleMass = 0.01f; // determines the mass of particles
+
+GLfloat addSphereX = 0.0f;
+GLfloat addSphereY = 0.0f;
+GLfloat addSphereZ = 0.0f;
+GLfloat addSphereR = 1.0f;
+
+extern glm::vec3 wind;
 
 
 inline void AddVertex(vector <GLfloat>* a, glm::vec3 A)
@@ -96,6 +103,8 @@ void CreateParticles(vector <Particle>* a, int squares)
 	GLfloat deltaX = r / (GLfloat)squares;
 	GLfloat deltaZ = r / (GLfloat)squares;
 
+	GLfloat mass = particleMass; // mass of each individual particle
+
 	for (GLuint i = 0; i < squares; i++)
 	{
 
@@ -111,18 +120,18 @@ void CreateParticles(vector <Particle>* a, int squares)
 				r * z);
 
 			if (lock == 0) {
-				AddParticle(a, Particle(v, false));
+				AddParticle(a, Particle(v, mass, false));
 			}
 			else {
 				// lock two of the corners
 				if ((i == 0) && ((j == 0) || (j % squares == squares - 1)) && (lock != 0)) {
-					AddParticle(a, Particle(v, true));
+					AddParticle(a, Particle(v, mass, true));
 				}
 				else if ((i == squares - 1) && ((j == 0) || (j % squares == squares - 1)) && (lock == 2)) {
-					AddParticle(a, Particle(v, true));
+					AddParticle(a, Particle(v, mass, true));
 				}
 				else {
-					AddParticle(a, Particle(v, false));
+					AddParticle(a, Particle(v, mass, false));
 				}
 			}	
 		}
@@ -446,7 +455,6 @@ int main()
 
 	// other objects for the cloth to collide with
 	vector <Sphere> spheres;
-	AddSphere(glm::vec3(0.f, 0.f, 0.f), 1.f, &spheres);
 
 	BuildScene(VBO, VAO, squares, particles, spheres);
 	int shaderProg = CompileShaders();
@@ -477,6 +485,7 @@ int main()
 	glfwSetCursorPosCallback(window, MouseCallback);
 	glfwSetMouseButtonCallback(window, MouseButtonCallback);;
 
+
 	// Main while loop
 	while (!glfwWindowShouldClose(window))
 	{
@@ -502,7 +511,11 @@ int main()
 			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
 		}
 		*/
+		
 		if (ImGui::Checkbox("Enable Min-Max Stretch", &enableMinMaxStretch)) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		if (ImGui::Button("Reset Scene")) {
 			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
 		}
 		/*
@@ -528,6 +541,7 @@ int main()
 		if (ImGui::SliderInt("Cloth Resolution", &squares, 2, 100, "%d", 0)) {
 			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
 		}
+		/*
 		if (ImGui::SliderInt("Point Size", &pointSize, 1, 10, "%d", 0)) {
 			glPointSize(pointSize); //set the new point size if it has been changed			
 		}
@@ -537,16 +551,42 @@ int main()
 		if (ImGui::ColorEdit4("Color", color)) { //set the new color only if it has changed
 			glUniform4f(glGetUniformLocation(shaderProg, "color"), color[0], color[1], color[2], color[3]);
 		}
+		*/
 		ImGui::SliderFloat("Time Step", &deltaT, 0.0f, 0.001f, "%.5f");
-		if (ImGui::SliderFloat("Constraint Elasticity", &defaultK, 1.f, 100.f, "%.1f")) {
+		if (ImGui::SliderFloat("Constraint Elasticity", &defaultK, 1.f, 1000.f, "%.1f")) {
 			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
 		}
+		if (ImGui::SliderFloat("Particle Mass", &particleMass, 0.00001f, 0.1f, "%.5f")) {
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		// sphere gui
+		if (ImGui::Button("Add Sphere")) {
+			AddSphere(glm::vec3(addSphereX, addSphereY, addSphereZ), addSphereR, &spheres);
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		if (ImGui::Button("Clear Spheres")) {
+			spheres.clear();
+			ResetScene(VBO, VAO, squares, &particles, &constraints, &spheres);
+		}
+		ImGui::SliderFloat("New Sphere X", &addSphereX, -2.0f, 2.0f, "%.1f");
+		ImGui::SliderFloat("New Sphere Y", &addSphereY, -2.0f, 0.5f, "%.1f");
+		ImGui::SliderFloat("New Sphere Z", &addSphereZ, -2.0f, 2.0f, "%.1f");
+		ImGui::SliderFloat("New Sphere Radius", &addSphereR, 0.1f, 2.0f, "%.1f");
+		// wind gui
+		if (ImGui::Button("Reset Wind")) {
+			wind = glm::vec3(0.f, 0.f, 0.f);
+		}
+		ImGui::SliderFloat("Wind Speed X", &wind[0], -2.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Wind Speed Y", &wind[1], -2.f, 2.f, "%.2f");
+		ImGui::SliderFloat("Wind Speed Z", &wind[2], -2.f, 2.f, "%.2f");
+
 
 		// Ends the window
 		ImGui::End();
 
 		// Perform a step of physics simulation and rebuild scene
 		vector <Particle> newParticles = particles;
+#pragma omp parallel for
 		for (int i = 0; i < particles.size(); i++) {
 			spring::updateParticle(&particles[i], &newParticles[i], spheres, deltaT);
 		}
